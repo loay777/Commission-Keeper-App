@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'MyCommissionsScreen.dart';
-import 'dart:async';
 import 'package:calculate_commission/DB/ComissionModel.dart';
 import 'package:calculate_commission/BLOCS/DatabaseBloc.dart';
 import 'package:date_format/date_format.dart';
+import 'package:audioplayers/audio_cache.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -16,6 +17,7 @@ void main() {
   ));
 }
 
+const alarmAudioPath = "sounds/coin-sound.mp3";
 class MainScreen extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
@@ -24,6 +26,8 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  static AudioCache dj = new AudioCache();
+
   var _formKey = GlobalKey<FormState>();
   final double _minimumPadding = 5.0;
   String commission = "";
@@ -33,17 +37,12 @@ class _MainScreenState extends State<MainScreen> {
   final bloc = CommissionBloc();
 
   @override
-  void dispose() {
-    bloc.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     TextStyle textStyle = Theme.of(context).textTheme.title;
     return Scaffold(
       resizeToAvoidBottomPadding: true,
       floatingActionButton: FloatingActionButton(
+        heroTag: 'save',
         onPressed: () {
           _saveCommissionDialog();
         },
@@ -72,8 +71,10 @@ class _MainScreenState extends State<MainScreen> {
                     MaterialPageRoute(
                         builder: (context) => MyCommissionsPage()));
               },
-              title: Text('My Commessions'),
-              leading: CircleAvatar(child: Icon(Icons.monetization_on),),
+              title: Text('Saved Commissions'),
+              leading: CircleAvatar(
+                child: Hero(tag: 'Money', child: Icon(Icons.monetization_on)),
+              ),
             )
           ],
         ),
@@ -103,6 +104,10 @@ class _MainScreenState extends State<MainScreen> {
                           //if the input is not a number
                           return 'Please enter numbers only';
                         }
+                        if (double.tryParse(value) <0) {
+                          //if the input is less than or equal to zero
+                          return 'Deal Value must be greater than 0';
+                        }
                       },
                       decoration: InputDecoration(
                           labelText: 'Deal Value',
@@ -126,6 +131,10 @@ class _MainScreenState extends State<MainScreen> {
                         }
                         if (double.parse(value) > 100) {
                           return 'Commission percentage cant be more than 100';
+                        }
+                        if (double.tryParse(value) <0) {
+                          //if the input is less than or equal to zero
+                          return 'Deal Value must be greater than 0';
                         }
                       },
                       decoration: InputDecoration(
@@ -152,6 +161,7 @@ class _MainScreenState extends State<MainScreen> {
                               setState(() {
                                 if (_formKey.currentState.validate()) {
                                   commission = _commissionCalculator();
+                                  SystemChannels.textInput.invokeMethod('TextInput.hide');
                                 }
                               });
                             },
@@ -169,9 +179,9 @@ class _MainScreenState extends State<MainScreen> {
                               textScaleFactor: 1.5,
                             ),
                             onPressed: () {
-                              setState(() {
-                                _reset();
-                              });
+                                dj.play(alarmAudioPath);
+
+                              _reset();
                             },
                           ),
                         ),
@@ -183,8 +193,8 @@ class _MainScreenState extends State<MainScreen> {
                         child: Padding(
                       padding: EdgeInsets.all(_minimumPadding * 2),
                       child: Text(
-                        'Comission = $commission ',
-                        style: TextStyle(fontSize: 28.0, color: Colors.white),
+                        'Commission = $commission ',
+                        style: TextStyle(fontSize: 26.0, color: Colors.white),
                       ),
                     )))
               ],
@@ -193,6 +203,21 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  String _dealValueValedator(String value){
+    String valedationMessage ;
+    if (value.isEmpty) {
+      valedationMessage =  'Please enter deal value';
+    }
+    if (double.tryParse(value) == null) {
+    //if the input is not a number
+      valedationMessage = 'Please enter numbers only';
+    }
+    if (double.tryParse(value) <0) {
+    //if the input is less than or equal to zero
+      valedationMessage ='Deal Value must be greater than 0';
+    }
+    return valedationMessage;
+  }
   Widget getImageAsset() {
     AssetImage assetImage = AssetImage('images/money.png');
     Image image = Image(
@@ -216,9 +241,11 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _reset() {
-    commission = '';
-    _dealValueController.clear();
-    _percentageController.clear();
+    setState(() {
+      commission = '';
+      _dealValueController.clear();
+      _percentageController.clear();
+    });
   }
 
   void _saveCommission() async {
@@ -234,6 +261,7 @@ class _MainScreenState extends State<MainScreen> {
       // Success
       _showAlertDialog('Status', 'Commission Saved Successfully');
       _reset();
+
     } else {
       // Failure
       _showAlertDialog('Status', 'Problem Saving Commission');
@@ -252,7 +280,12 @@ class _MainScreenState extends State<MainScreen> {
               decoration: InputDecoration(
                   labelText: "Commission Title:",
                   hintText: "e.g. my first deal",
-                  icon: Icon(Icons.note_add)),
+                  fillColor: Colors.greenAccent,
+                  icon: Icon(
+                    Icons.note_add,
+                    color: Colors.white,
+                    size: 55,
+                  )),
             ),
           ),
         ],

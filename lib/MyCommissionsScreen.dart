@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:calculate_commission/BLOCS/DatabaseBloc.dart';
 import 'DB/ComissionModel.dart';
-import 'dart:math' as math;
 
 //Saved Commissions UI
 class MyCommissionsPage extends StatefulWidget {
@@ -21,7 +20,12 @@ class _MyCommissionsPageState extends State<MyCommissionsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("My Commissions")),
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Hero(tag: 'Money', child: Icon(Icons.monetization_on)),
+          Expanded(child: Text("   My Commissions"))
+        ]),
+      ),
       body: StreamBuilder<List<Commission>>(
         stream: bloc.commissions,
         builder:
@@ -32,29 +36,33 @@ class _MyCommissionsPageState extends State<MyCommissionsPage> {
               itemBuilder: (BuildContext context, int index) {
                 Commission item = snapshot.data[index];
                 return Dismissible(
-                  direction: DismissDirection.endToStart,
+                    direction: DismissDirection.endToStart,
                     key: UniqueKey(),
                     background: Container(
                         color: Colors.red,
                         child: Align(
-                          alignment: FractionalOffset(0.9, 0.5),
-                          child:Icon(
-                          Icons.delete,
-                          textDirection: TextDirection.rtl,
-                        ))),
+                            alignment: FractionalOffset(0.9, 0.5),
+                            child: Icon(
+                              Icons.delete,
+                            ))),
                     onDismissed: (direction) {
                       bloc.delete(item.id);
                     },
-                    child: Card(
-                      color: Colors.white30,
-                      elevation: 2.0,
-                      child: ListTile(
-                        title: Text(item.commissionTitle),
-                        leading: Text(item.id.toString()),
-                        subtitle: Text(item.commissionValue),
-                        trailing: Text("Date: " + item.date),
-                      ),
-                    ));
+                    child: GestureDetector(
+                        onTap: () {
+                          _commissionDetailsDialog(item.commissionTitle,
+                              item.commissionValue, item.date);
+                        },
+                        child: Card(
+                          color: Colors.white30,
+                          elevation: 2.0,
+                          child: ListTile(
+                            title: Text(item.commissionTitle),
+                            leading: Icon(Icons.monetization_on),
+                            subtitle: Text(item.commissionValue),
+                            trailing: Text("Date: " + item.date),
+                          ),
+                        )));
               },
             );
           } else {
@@ -62,15 +70,19 @@ class _MyCommissionsPageState extends State<MyCommissionsPage> {
           }
         },
       ),
-//      floatingActionButton: FloatingActionButton(
-//        child: Icon(Icons.add),
-//        onPressed: () async {
-//          Commission rnd =
-//              testCommissions[math.Random().nextInt(testCommissions.length)];
-//          bloc.add(rnd);
-//          await bloc.getCommissions();
-//        },
-//      ),
     );
+  }
+
+  void _commissionDetailsDialog(String title, String value, String date) {
+    AlertDialog alertDialog = AlertDialog(
+      shape: RoundedRectangleBorder(
+          side: BorderSide(color: Colors.indigo, style: BorderStyle.solid)),
+      title: Text(
+        title,
+        style: TextStyle(color: Colors.indigo),
+      ),
+      content: Text('Commission: ' + value + '\nDate:' + date),
+    );
+    showDialog(context: context, builder: (_) => alertDialog);
   }
 }
